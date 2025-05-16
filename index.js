@@ -1,29 +1,19 @@
 // index.js
-require('dotenv').config();
 const express = require('express');
-const cron = require('node-cron');
-const { fetchAndSavePrices } = require('./services/stockService');
+const dotenv = require('dotenv');
+dotenv.config();
 
 const app = express();
+app.use(express.json());
+
+// ✅ Route handler
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', adminRoutes);
+
+// ✅ Start scheduled cron job
+require('./cron/scheduler')();
+
 const PORT = process.env.PORT || 4000;
-
-// Optional secured manual trigger
-app.get('/api/admin/sync-now', (req, res) => {
-  const apiKey = req.headers['x-api-key'];
-  if (apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  fetchAndSavePrices()
-    .then(() => res.json({ status: 'Synced' }))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-app.get('/', (req, res) => res.send('✅ Stock API Running'));
-
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-
-  // Start cron job: Every 30 minutes
-  cron.schedule('*/30 * * * *', fetchAndSavePrices);
 });
