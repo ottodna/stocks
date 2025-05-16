@@ -21,8 +21,9 @@ app.get('/api/admin/sync-now', (req, res) => {
 
 app.get('/', (req, res) => res.send('✅ Stock API Running'));
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
+
   // Start cron job: Every 30 minutes
   cron.schedule('*/30 * * * *', fetchAndSavePrices);
 });
