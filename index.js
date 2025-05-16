@@ -1,46 +1,28 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const app = express();
-const stockRoutes = require('./routes/stocks');
-const fetchStocksJob = require('./services/fetchStocks');
-const { adminStats } = require('./adminStats');
-const cron = require('node-cron'); // for cron jobs
+import express from 'express';
+import dotenv from 'dotenv';
+import morgan from 'morgan';
+import cors from 'cors';
+import stockRoutes from './src/modules/stocks/stocks.routes.js';
+import apiKeyAuth from './src/middleware/apiKeyAuth.js';
+import './src/modules/stocks/stocks.cron.js'; // Cron fetcher
 
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use(morgan('dev'));
 
-// Track API calls (except admin routes)
-app.use((req, res, next) => {
-  if (!req.path.startsWith('/admin')) {
-    adminStats.totalApiCalls++;
-    adminStats.todayApiCalls++;
-  }
-  next();
-});
+// ✅ Protect all APIs with x-api-key
+app.use('/api', apiKeyAuth);
 
+// ✅ Stocks module
+app.use('/api/stocks', stockRoutes);
 
-// Routes
-app.use('/api', stockRoutes);
+app.get('/', (req, res) => res.send('📈 Stock API is running'));
 
-// Admin stats endpoint
-app.get('/admin/stats', (req, res) => {
-  res.json(adminStats);
-});
-
-
-// Start cron job
-fetchStocksJob();
-
-// Start server
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-
-// Reset today's API call counter every midnight
-cron.schedule('0 0 * * *', () => {
-  adminStats.todayApiCalls = 0;
-});
-
