@@ -1,28 +1,28 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import morgan from 'morgan';
-import cors from 'cors';
-import stockRoutes from './src/modules/stocks/stocks.routes.js';
-import apiKeyAuth from './src/middleware/apiKeyAuth.js';
-import './src/modules/stocks/stocks.cron.js'; // Cron fetcher
-
-dotenv.config();
+// index.js
+require('dotenv').config();
+const express = require('express');
+const cron = require('node-cron');
+const { fetchAndSavePrices } = require('./services/stockService');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+// Optional secured manual trigger
+app.get('/api/admin/sync-now', (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== process.env.API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-// ✅ Protect all APIs with x-api-key
-app.use('/api', apiKeyAuth);
+  fetchAndSavePrices()
+    .then(() => res.json({ status: 'Synced' }))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
 
-// ✅ Stocks module
-app.use('/api/stocks', stockRoutes);
-
-app.get('/', (req, res) => res.send('📈 Stock API is running'));
+app.get('/', (req, res) => res.send('✅ Stock API Running'));
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  // Start cron job: Every 30 minutes
+  cron.schedule('*/30 * * * *', fetchAndSavePrices);
 });
