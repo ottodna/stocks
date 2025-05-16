@@ -6,8 +6,13 @@ COPY package*.json ./
 
 RUN apk add --no-cache libc6-compat \
     && npm install -g npm@11.4.0 \
-    && npm install \
-    && npx prisma generate   # ✅ ADD THIS LINE
+    && npm install
+
+# 👇 Add prisma folder BEFORE generating client
+COPY prisma ./prisma
+
+# 👇 Generate Prisma client now that schema is present
+RUN npx prisma generate
 
 COPY . .
 
